@@ -25,3 +25,4 @@ ENV/
 EOF < /dev/null
 **/.claude/settings.local.json
 CLAUDE.md
+install.sh
