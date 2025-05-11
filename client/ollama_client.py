@@ -1,8 +1,12 @@
 import json
 from openai import OpenAI
 
+def load_params(path="config/params.json"):
+    with open(path) as f:
+        return json.load(f)
+
 class OllamaClient(OpenAI):
-    def __init__(self, config_path="config/default.json", **overrides):
+    def __init__(self, config_path="config/model_config.json", **overrides):
         # Load config from JSON file
         with open(config_path) as f:
             config = json.load(f)

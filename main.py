@@ -1,74 +1,104 @@
 # main.py
-import sys
+import logging
 from client.ollama_client import OllamaClient
 from zork_runner import ZorkRunner
 
-ZORK_PATH = "./zork"
-ZORK_DIR  = "zork"
+LOG_FILE = "zork_game.log"
 
-def get_agent_move(client, turn_text):
-    """
-    Send the current turn_text to the Ollama agent and return
-    the single-sentence move it suggests.
-    """
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a helpful narrator who explains what is happening in the game Zork "
-                "and then tells the player exactly one concise next move (1–2 sentences)."
-            )
-        },
-        {"role": "user", "content": f"In Zork, the game just said:\n\n{turn_text}\n\nWhat should I do next?"}
-    ]
+# ——— Configure logging —————————————————————————————————————————————
+logging.basicConfig(
+    filename=LOG_FILE,
+    filemode="w",            # overwrite each run
+    level=logging.INFO,
+    format="%(asctime)s %(message)s"
+)
 
+def get_agent_move(client, convo):
+    """
+    Ask Ollama for the next move, given the full conversation so far.
+    Expects `convo` to be a list of messages in {role,content} format.
+    Returns a single-line Zork command.
+    """
     stream = client.chat.completions.create(
         model=client.model_name,
-        messages=messages,
+        messages=convo,
         stream=True
     )
 
-    # accumulate the content deltas into one string
     suggestion = ""
     for chunk in stream:
         delta = chunk.choices[0].delta.content
         if delta:
             suggestion += delta
 
-    # strip off anything after a newline (we only want the first sentence)
+    # only keep up to the first newline
     return suggestion.strip().split("\n")[0]
 
 def main():
-    client = OllamaClient()
-    runner = ZorkRunner(zork_path=ZORK_PATH, zork_dir=ZORK_DIR)
+    client = OllamaClient(config_path="config/model_config.json")
+    runner = ZorkRunner(config_path="config/zork_config.json")
     turns = runner.turn_stream()
 
+    # ——— initialize conversation history ——————————————————————
+    convo = [
+        {
+            "role": "system",
+            "content": (
+                "You are an agent exploring an environment. "
+                "Based on the environments narration, you output exactly one concise action compatible with the environment."
+            )
+        }
+    ]
+
     try:
-        # Get and display the very first turn
+        # ——— First turn (game intro) —————————————————————————
         first_turn = next(turns)
         print("\n🧙 Zork:\n" + first_turn + "\n")
+        logging.info("ZORK: %s", first_turn)
 
-        # Loop: ask agent for move, send it, print next turn
+        # add player’s “what do I do?” prompt for the agent
+        convo.append({
+            "role": "user",
+            "content": (
+                f"In Zork, the game just said:\n\n{first_turn}\n\n"
+                "What should I do next? (Just the single action)"
+            )
+        })
+
+        # ——— Main loop —————————————————————————————————————
         while True:
-            move = get_agent_move(client, first_turn)
-            print("🤖 Agent suggests:", move, "\n")
+            # 1. Ask the agent for its move
+            move = get_agent_move(client, convo)
+            print("🤖 Agent plays:", move, "\n")
+            logging.info("AGENT: %s", move)
 
+            # 2. Record the agent’s reply in the convo history
+            convo.append({"role": "assistant", "content": move})
+
+            # 3. Send that move into Zork
             runner.send_command(move)
+
+            # 4. Read the next turn from Zork
             next_turn = next(turns)
             print("🧙 Zork:\n" + next_turn + "\n")
+            logging.info("ZORK: %s", next_turn)
 
-            first_turn = next_turn  # for the next iteration
+            # 5. Ask agent again based on this new state
+            convo.append({
+                "role": "user",
+                "content": (
+                    f"In Zork, the game just said:\n\n{next_turn}\n\n"
+                    "What should I do next? (Just the single action)"
+                )
+            })
 
     except KeyboardInterrupt:
         print("\n👋 Exiting on user interrupt.")
     except StopIteration:
         print("👋 Zork process ended.")
     finally:
-        # ensure we clean up the subprocess
-        try:
-            runner.process.terminate()
-        except Exception:
-            pass
+        runner.process.terminate()
+        print(f"\nSession log written to {LOG_FILE}")
 
 if __name__ == "__main__":
     main()

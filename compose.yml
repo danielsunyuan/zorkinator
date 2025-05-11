@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama  # persist models between restarts
+
+  zorkinator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - ollama
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - OLLAMA_API=http://ollama:11434
+    tty: true
+
+volumes:
+  ollama_models:
