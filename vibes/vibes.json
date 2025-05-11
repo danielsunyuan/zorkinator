@@ -1,0 +1,9 @@
+{
+    "happy_sad": 0.2,
+    "calm_angry": 0.6,
+    "confident_afraid": 0.3,
+    "engaged_bored": 0.5,
+    "curious_disinterested": 0.1,
+    "sociable_lonely": 0.4,
+    "energized_tired": 0.7
+  }
