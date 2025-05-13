@@ -16,14 +16,13 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      # Docker-in-Docker so we can run docker compose
       docker:
         image: docker:24.0.9-dind
         options: >-
           --privileged
         ports:
           - 8000:8000
-          - 11434:11434   # ollama (not strictly needed for these tests)
+          - 11434:11434
         env:
           DOCKER_BUILDKIT: 1
 
@@ -37,7 +36,6 @@ jobs:
       - name: Build and start jericho service
         run: |
           docker compose up --build -d jericho
-          # wait until API responds (max ~60 s)
           for i in {1..30}; do
             if curl -sSf http://localhost:8000/docs >/dev/null; then
               echo "Jericho API is up"
@@ -47,9 +45,14 @@ jobs:
             sleep 2
           done
 
-      # Start a session, step, and check state
-      - name: Functional smoke test
-        run: ./jericho/smoke-test.sh
+      - name: Run smoke test
+        run: bash jericho/tests/smoke-test.sh
+
+      - name: Run multi-session test
+        run: bash jericho/tests/multi-session-test.sh
+
+      - name: Run session inventory test
+        run: bash jericho/tests/session-test.sh
 
       - name: Tear down
         if: always()
