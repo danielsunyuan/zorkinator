@@ -49,19 +49,7 @@ jobs:
 
       # Start a session, step, and check state
       - name: Functional smoke test
-        run: |
-          set -e  # fail if any command errors
-
-          SID="ci-test"
-
-          curl -sSf -X POST "http://localhost:8000/start?session_id=$SID" >/dev/null
-          curl -sSf "http://localhost:8000/state?session_id=$SID"      >/dev/null
-          curl -sSf -X POST "http://localhost:8000/step?session_id=$SID" \
-               -H "Content-Type: application/json" \
-               -d '{"action": "open mailbox"}'                         >/dev/null
-          curl -sSf "http://localhost:8000/save?session_id=$SID&slot=ci" >/dev/null
-          curl -sSf "http://localhost:8000/load?session_id=$SID&slot=ci" >/dev/null
-          curl -sSf "http://localhost:8000/game-over?session_id=$SID"    >/dev/null
+        run: ./jericho/smoke-test.sh
 
       - name: Tear down
         if: always()
