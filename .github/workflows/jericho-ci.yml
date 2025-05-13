@@ -1,0 +1,68 @@
+name: Jericho API CI
+
+on:
+  push:
+    paths:
+      - "jericho/**"
+      - "compose.yml"
+      - ".github/workflows/jericho-ci.yml"
+  pull_request:
+    paths:
+      - "jericho/**"
+      - "compose.yml"
+
+jobs:
+  jericho-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      # Docker-in-Docker so we can run docker compose
+      docker:
+        image: docker:24.0.9-dind
+        options: >-
+          --privileged
+        ports:
+          - 8000:8000
+          - 11434:11434   # ollama (not strictly needed for these tests)
+        env:
+          DOCKER_BUILDKIT: 1
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker CLI
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start jericho service
+        run: |
+          docker compose up --build -d jericho
+          # wait until API responds (max ~60 s)
+          for i in {1..30}; do
+            if curl -sSf http://localhost:8000/docs >/dev/null; then
+              echo "Jericho API is up"
+              break
+            fi
+            echo "Waiting for API..."
+            sleep 2
+          done
+
+      # Start a session, step, and check state
+      - name: Functional smoke test
+        run: |
+          set -e  # fail if any command errors
+
+          SID="ci-test"
+
+          curl -sSf -X POST "http://localhost:8000/start?session_id=$SID" >/dev/null
+          curl -sSf "http://localhost:8000/state?session_id=$SID"      >/dev/null
+          curl -sSf -X POST "http://localhost:8000/step?session_id=$SID" \
+               -H "Content-Type: application/json" \
+               -d '{"action": "open mailbox"}'                         >/dev/null
+          curl -sSf "http://localhost:8000/save?session_id=$SID&slot=ci" >/dev/null
+          curl -sSf "http://localhost:8000/load?session_id=$SID&slot=ci" >/dev/null
+          curl -sSf "http://localhost:8000/game-over?session_id=$SID"    >/dev/null
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

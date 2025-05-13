@@ -14,6 +14,7 @@ COPY games /app/games
 # Install dependencies (you can adjust as needed)
 COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN python -m spacy download en_core_web_sm
 
 # Start FastAPI server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
