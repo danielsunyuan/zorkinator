@@ -4,7 +4,7 @@ services:
   jericho:
     build:
       context: ./jericho
-      dockerfile: dockerfile.zork
+      dockerfile: dockerfile
     ports:
       - "8000:8000"
     env_file:
