@@ -2,19 +2,21 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc g++ build-essential cmake git wget unzip && \
     apt-get clean
 
-# Copy only what's needed
-COPY main.py /app/main.py
-COPY games /app/games
+# This layer will be cached: Docker downloads the ZIP only when the URL or hash changes
+RUN wget -q https://github.com/BYU-PCCL/z-machine-games/archive/master.zip \
+ && unzip -q master.zip \
+ && mv z-machine-games-master/jericho-game-suite ./games \
+ && rm -rf master.zip z-machine-games-master
 
-# Install dependencies (you can adjust as needed)
 COPY requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && pip install -r requirements.txt
+
+COPY main.py /app/main.py
+
 RUN python -m spacy download en_core_web_sm
 
-# Start FastAPI server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
