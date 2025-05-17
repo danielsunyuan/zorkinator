@@ -43,3 +43,11 @@ Edit the config files in the `config/` directory to customize:
 Like samples in a hip-hop track, this project draws inspiration from:
 - https://github.com/bburns/Lantern.git
 - https://github.com/devshane/zork.git
+
+
+
+conda create -n jericho python=3.11 -y
+export CC=clang CXX=clang++
+python -m pip install --no-binary :all: jericho==3.3.0
+python -m pip install spacy
+python -m spacy download en_core_web_sm

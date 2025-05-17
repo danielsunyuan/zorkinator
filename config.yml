@@ -1,0 +1,14 @@
+llm_backend:
+  type: "ollama"
+  model: "llama3"
+  base_url: "http://localhost:11434"
+  api_key: null
+
+zork:
+  exec_dir: "/Users/duan/Documents/zork_src/zork"
+  exec_name: "zork"
+
+pipeline:
+  - name: "step_counter"
+    config:
+      start_at: 0

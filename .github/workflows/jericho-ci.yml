@@ -1,0 +1,56 @@
+name: Jericho API CI
+
+on:
+  push:
+    paths:
+      - "jericho/**"
+      - "compose.yml"
+      - ".github/workflows/jericho-ci.yml"
+  pull_request:
+    paths:
+      - "jericho/**"
+      - "compose.yml"
+
+jobs:
+  jericho-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:24.0.9-dind
+        options: >-
+          --privileged
+        env:
+          DOCKER_BUILDKIT: 1
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker CLI
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start jericho service
+        run: |
+          docker compose up --build -d jericho
+          for i in {1..30}; do
+            if curl -sSf http://localhost:8000/docs >/dev/null; then
+              echo "Jericho API is up"
+              break
+            fi
+            echo "Waiting for API..."
+            sleep 2
+          done
+
+      - name: Run smoke test
+        run: bash jericho/tests/smoke-test.sh
+
+      - name: Run multi-session test
+        run: bash jericho/tests/multi-session-test.sh
+
+      - name: Run session inventory test
+        run: bash jericho/tests/session-test.sh
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
