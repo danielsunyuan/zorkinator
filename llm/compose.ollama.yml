@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ~/.ollama:/root/.ollama  # maps host's model cache assuming they have ollama installed on their OS
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+    entrypoint: >
+      bash -c "
+        echo '▶ Starting Ollama and loading model: ${OLLAMA_MODEL}' &&
+        ollama serve &
+        sleep 2 &&
+        ollama run ${OLLAMA_MODEL}
+      "

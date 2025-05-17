@@ -27,3 +27,6 @@ EOF < /dev/null
 CLAUDE.md
 install.sh
 jericho/games/*
+
+# Secrets
+llm/ansible/inventory/inventory.ini
