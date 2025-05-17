@@ -30,3 +30,4 @@ jericho/games/*
 
 # Secrets
 llm/ansible/inventory/inventory.ini
+notes.txt

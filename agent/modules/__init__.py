@@ -1,1 +1,0 @@
-self.pipeline = load_pipeline(config)
