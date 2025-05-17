@@ -1,5 +1,3 @@
-# llm/ollama_client.py
-
 import requests
 
 class OllamaClient:
@@ -9,7 +7,6 @@ class OllamaClient:
         print(f"[OllamaClient] Using model: {self.model_name}")
 
     def chat_completion(self, messages, **kwargs):
-        # Merge model params with defaults
         payload = {
             "model": self.model_name,
             "messages": messages,

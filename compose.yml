@@ -11,26 +11,38 @@ services:
       - .env
     environment:
       - GAME_FILE=${GAME_FILE}
+    volumes:
+      - ./jericho/games/z-machine-games-master/jericho-game-suite:/app/games
 
   ollama:
     image: ollama/ollama
     ports:
       - "11434:11434"
     volumes:
-      - ollama_models:/root/.ollama  # persist models between restarts
+      - ${HOME}/.ollama:/root/.ollama
+      - ollama_models:/data
+
+  heuristics:
+    build:
+      context: ./heuristics
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./heuristics:/app
+    working_dir: /app
+    tty: true
 
   zorkinator:
     build:
-      context: .
-      dockerfile: dockerfile
+      context: ./zorkinator
+      dockerfile: Dockerfile
     depends_on:
+      - jericho
       - ollama
-    volumes:
-      - .:/app
-    working_dir: /app
     environment:
       - OLLAMA_API=http://ollama:11434
-      - JERICHO_API=http://zork-api:8000
+      - JERICHO_API=http://jericho:8000
     tty: true
 
 volumes:
