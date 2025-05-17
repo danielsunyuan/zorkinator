@@ -1,2 +1,6 @@
+# existing…
 requests
 pyyaml
+
+# add:
+langchain>=0.0.280
