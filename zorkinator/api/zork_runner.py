@@ -13,6 +13,7 @@ class ZorkRunner:
         for _ in range(10):
             try:
                 response = requests.post(f"{self.base_url}/start", params={"session_id": self.session_id})
+                print(f"[DEBUG] Jericho /start returned {response.status_code}: {response.text.strip()}")
                 response.raise_for_status()
                 data = response.json()
                 return data.get("response", "[No initial description provided]")

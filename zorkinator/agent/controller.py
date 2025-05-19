@@ -47,7 +47,7 @@ class AgentController:
                 # 🧩 Format combined feedback + environment for next step
                 observation = self._format_observation(env_state, step_feedback)
 
-                print("🧙 Zork says:\n" + observation + "\n")
+                print("🧙 Zork:\n" + observation + "\n")
                 logging.info("🔁 ZORK TURN: %s", json.dumps({
                     "step_result": step_feedback,
                     "env_state": next_turn
@@ -77,12 +77,17 @@ class AgentController:
         location = lines[0] if lines else "Unknown"
         description = "\n".join(lines[1:]) if len(lines) > 1 else ""
 
-        result = (
-            f"📍 Location: {location}\n\n"
-            f"🌳 Environment:\n{description.strip()}"
-        )
+        parts = []
 
+        # Raw feedback first, if any
         if step_feedback:
-            result += f"\n\n🎯 Last Action Result:\n{step_feedback.strip()}"
+            parts.append(step_feedback.strip())
+            parts.append("")
 
-        return result
+        # Then location & environment
+        # parts.append(f"📍 Location: {location}")
+        # parts.append("")
+        # parts.append("🌳 Environment:")
+        parts.append(description.strip())
+
+        return "\n".join(parts)

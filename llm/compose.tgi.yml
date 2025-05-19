@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   tgi:
     image: ghcr.io/huggingface/text-generation-inference:latest
