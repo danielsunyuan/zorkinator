@@ -22,21 +22,10 @@ services:
       - ${HOME}/.ollama:/root/.ollama
       - ollama_models:/data
 
-  heuristics:
-    build:
-      context: ./heuristics
-      dockerfile: Dockerfile
-    ports:
-      - "9000:9000"
-    volumes:
-      - ./heuristics:/app
-    working_dir: /app
-    tty: true
-
   zorkinator:
     build:
       context: ./zorkinator
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     depends_on:
       - jericho
       - ollama
