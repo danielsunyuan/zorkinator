@@ -1,7 +1,0 @@
-llm_backend:
-  model: llama3
-  base_url: http://ollama:11434
-
-zork:
-  exec_dir: /app/zork  # adjust path as needed
-  exec_name: zork

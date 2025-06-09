@@ -3,21 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
-*.egg-info/
-.installed.cfg
-*.egg
-
 # Log files
 *.log
 
 # Mac OS specific files
 .DS_Store
-
-# Virtual environment
-venv/
-env/
-ENV/
 
 # IDE specific files
 .idea/
@@ -26,8 +16,23 @@ EOF < /dev/null
 **/.claude/settings.local.json
 CLAUDE.md
 install.sh
+
+# Large files
 jericho/games/*
+
+# Cache
+.cache
 
 # Secrets
 llm/ansible/inventory/inventory.ini
 notes.txt
+
+.hf_cache
+.claude
+
+jericho/games
+
+prototypes
+
+llm
+docs

@@ -1,0 +1,14 @@
+# config.yaml
+game_file: "jericho/games/z-machine-games-master/autoplay-game-suite/zork1.z5"
+
+#–– Which Reasoner/Evaluator/Reflector to use ––#
+reasoner: LLMReasoner    # options: RandomReasoner, LLMReasoner, LLMReasonerNoValids
+evaluator: LLMEvaluator           # options: NullEvaluator, ScoreDeltaEvaluator, …, LLMEvaluator
+reflector: LLMReflector           # options: NullReflector, LLMReflector
+
+#–– LLM backend ––#
+ollama_model:    "llama3.1:8b"
+ollama_base_url: "http://localhost:11434"
+
+#–– Episode settings ––#
+episode_max_steps: 1000000
