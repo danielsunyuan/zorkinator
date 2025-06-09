@@ -1,7 +1,8 @@
-# run.py
+#!/usr/bin/env python
 import argparse
-import json
-from typing import List
+from typing import List, Tuple
+
+from omegaconf import OmegaConf
 
 from engine.core import ZorkinatorEngine
 from evaluator.post_run import evaluate_run
@@ -10,73 +11,97 @@ from utils.difficulty_profiles import apply_difficulty
 from langchain_core.runnables import RunnableConfig
 
 
-def run_episode(engine: ZorkinatorEngine, max_steps: int | None) -> List[str]:
-    """Stream LangGraph, collect transcript, obey optional step cap."""
+def run_episode(
+    engine: ZorkinatorEngine,
+    max_steps: int | None
+) -> Tuple[List[str], bool]:
     transcript = [engine.initial_state["obs"]]
     cfg = RunnableConfig(recursion_limit=1_000_000)
-    graph_state = engine.initial_state
+    state = engine.initial_state
     steps, done = 0, False
 
-    for graph_state in engine.graph.stream(graph_state, cfg, stream_mode="values"):
+    for state in engine.graph.stream(state, cfg, stream_mode="values"):
+        transcript.append(state["obs"])
         steps += 1
-        transcript.append(graph_state["obs"])
 
-        if graph_state.get("done"):
+        if state.get("done"):
             done = True
             break
         if max_steps and steps >= max_steps:
-            print(f"\n[Runner] Step limit of {max_steps} reached. Ending run.")
+            print(f"\n[Runner] Step limit {max_steps} reached; ending.")
             break
 
     return transcript, done
 
 
 def run_single_action(engine: ZorkinatorEngine, action: str) -> None:
-    """Execute a single action, show the response, then exit."""
-    env = engine.env
-    obs, _ = env.reset()
+    obs, _ = engine.env.reset()
     print("[Env Start]", obs)
-    obs, *_ = env.step(action)
+    obs, *_ = engine.env.step(action)
     print("[Env Response]", obs.strip())
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the Zorkinator agent.")
-    parser.add_argument("--config", default="config.json",
-                        help="Path to config file")
-    parser.add_argument("--action", help="Run one action and exit")
-    parser.add_argument("--max-steps", type=int,
-                        help="Optional step limit (overrides profile)")
-    parser.add_argument("--difficulty", choices=["easy", "medium", "hard", "rogue"],
-                        help="Override difficulty in config/profile")
+    parser = argparse.ArgumentParser(
+        description="Run the Zorkinator agent with YAML+--opts config"
+    )
+    parser.add_argument(
+        "--config-file", "-c",
+        required=True,
+        help="Path to YAML config (see config.yaml)"
+    )
+    # Capture all further overrides as key=value strings
+    parser.add_argument(
+        "--opts",
+        nargs=argparse.REMAINDER,
+        help="Override config options: KEY=VALUE ..."
+    )
+    parser.add_argument(
+        "--action",
+        help="Run one action and exit"
+    )
     args = parser.parse_args()
 
-    # ── Load + apply difficulty profile
-    with open(args.config) as f:
-        config = json.load(f)
-    if args.difficulty:
-        config["difficulty"] = args.difficulty
-    config = apply_difficulty(config)        # fills in planner, loop, etc.
+    # 1) Load YAML
+    cfg = OmegaConf.load(args.config_file)
 
-    # ── Build components & engine
-    planner, loop = build_components(config)
-    engine = ZorkinatorEngine(config["game_file"], planner, loop)
+    # 2) Apply overrides from CLI (--opts)
+    #    e.g. --opts reasoner=RandomReasoner episode_max_steps=500
+    if args.opts:
+        # OmegaConf merges dotlist semantics
+        override_conf = OmegaConf.from_dotlist(args.opts)
+        cfg = OmegaConf.merge(cfg, override_conf)
 
-    # ── Single-action shortcut
+    # 3) Difficulty profiles (optional)
+    cfg = apply_difficulty(cfg)
+
+    # 4) Build our three plugins
+    reasoner, evaluator, reflector = build_components(cfg)
+
+    # 5) Instantiate engine
+    engine = ZorkinatorEngine(
+        game_path=cfg.game_file,
+        reasoner=reasoner,
+        evaluator=evaluator,
+        reflector=reflector
+    )
+
+    # 6) Single-action shortcut
     if args.action:
         run_single_action(engine, args.action)
         return
 
-    # ── Episode run
+    # 7) Full episode run
     print("🚀 Zorkinator modular engine started")
-    cap = args.max_steps or config.get("episode_max_steps")
+    cap = cfg.get("episode_max_steps")
     transcript, done = run_episode(engine, cap)
 
-    # ── Post-run evaluation
+    # 8) Post-run evaluation
     report = evaluate_run(engine.env, transcript, done=done)
     print("\n🧠 Final Evaluation Report")
     for k, v in report.items():
         print(f"{k}: {v}")
+
 
 if __name__ == "__main__":
     main()
