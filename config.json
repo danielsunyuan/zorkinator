@@ -1,0 +1,9 @@
+{
+  "game_file": "jericho/games/z-machine-games-master/autoplay-game-suite/zork1.z5",
+  "planner": "LLMPlanner",
+  "loop_heuristic": "SimpleLoopDetector",
+  "ollama_model": "llama3.1:8b",
+  "ollama_base_url": "http://localhost:11434",
+  "recursion_limit": 1000000,
+  "use_frontier_fallback": false
+}

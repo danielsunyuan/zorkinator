@@ -45,9 +45,44 @@ Like samples in a hip-hop track, this project draws inspiration from:
 - https://github.com/devshane/zork.git
 
 
+# Requriements
 
-conda create -n jericho python=3.11 -y
-export CC=clang CXX=clang++
-python -m pip install --no-binary :all: jericho==3.3.0
-python -m pip install spacy
-python -m spacy download en_core_web_sm
+
+Ollama
+```
+ollama serve
+```
+
+Clang Compiler (for Jericho Game Env)
+```
+sudo apt update
+sudo apt install clang build-essential -y
+```
+
+
+# Quickstart
+
+
+```
+conda create -n zorkinator python=3.11 -y
+conda activate zorkinator
+```
+
+```
+# Ensure Jericho builds from source
+export CC=clang
+export CXX=clang++
+pip install --no-binary=jericho -r requirements.txt
+```
+
+```
+# Download the Libarary of Text Based Games
+bash games/download.sh
+
+python -m ipykernel install --user --name zorkinator --display-name "Python (zorkinator)"
+```
+
+
+```
+python run.py --difficulty rogue --max-steps 50
+```

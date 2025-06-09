@@ -26,3 +26,12 @@ jericho/games/*
 # Secrets
 llm/ansible/inventory/inventory.ini
 notes.txt
+
+.hf_cache
+.claude
+
+prototypes
+
+llm
+jericho
+docs
