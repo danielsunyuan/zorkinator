@@ -53,14 +53,16 @@ def reason(state: AgentState, env: FrotzEnv, reasoner: Reasoner) -> AgentState:
 
 def act(state: AgentState, env: FrotzEnv) -> AgentState:
     """
-    Act node: execute the last action, update obs, memory, seen, done.
+    Act node: execute the last action in the env, update obs/memory/seen,
+    and set the done flag.
     """
-    obs, _, _, done = env.step(state["last_action"])
+    action = state["last_action"]
+    obs, _, done, _ = env.step(action)
     obs = obs.strip()
-    print(f"> {state['last_action']}\n{obs}\n")
-    state["memory"] += f"\n> {state['last_action']}\n{obs}"
-    state["seen"].append(f"{obs}::{state['last_action']}")
+    print(f"> {action}\n{obs}\n")
     state["obs"] = obs
+    state["memory"] += f"\n> {action}\n{obs}"
+    state["seen"].append(f"{obs}::{action}")
     state["done"] = done
     return state
 
