@@ -3,7 +3,7 @@ import argparse
 import json
 from typing import List
 
-from engine.engine_core import ZorkinatorEngine
+from engine.core import ZorkinatorEngine
 from evaluator.post_run import evaluate_run
 from utils.config_loader import build_components
 from utils.difficulty_profiles import apply_difficulty
@@ -77,7 +77,6 @@ def main() -> None:
     print("\n🧠 Final Evaluation Report")
     for k, v in report.items():
         print(f"{k}: {v}")
-
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-# engine_core.py
+# core.py
 
 from typing import Protocol, List, Tuple
 from jericho import FrotzEnv
@@ -31,25 +31,6 @@ class Evaluator(Protocol):
 
 class Reflector(Protocol):
     def reflect(self, transcript: List[str], reward: int) -> str: ...
-
-# ──────────────────────────────────────────────────────────────────────
-# 3. Concrete Implementations (basic stubs for now)
-# ──────────────────────────────────────────────────────────────────────
-class RandomPlanner:
-    def choose_action(self, state: AgentState, env: FrotzEnv) -> str:
-        return random.choice(["look", "north", "south", "east", "west"])
-
-class NoLoopHeuristic:
-    def avoid_loop(self, state: AgentState, action: str) -> str:
-        return action
-
-class NullEvaluator:
-    def evaluate(self, transcript: List[str]) -> int:
-        return 0
-
-class NullReflector:
-    def reflect(self, transcript: List[str], reward: int) -> str:
-        return ""
 
 # ──────────────────────────────────────────────────────────────────────
 # 4. Think / Act node logic

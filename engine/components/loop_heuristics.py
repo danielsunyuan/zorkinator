@@ -19,7 +19,7 @@ Use Case:
 """
 
 from collections import deque
-from engine.engine_core import AgentState
+from engine.core import AgentState
 from typing import Set
 import random
 

@@ -19,7 +19,7 @@ Use Case:
 
 from typing import List
 from jericho import FrotzEnv
-from engine.engine_core import AgentState
+from engine.core import AgentState
 import random
 from utils.ollama import OllamaClient
 
