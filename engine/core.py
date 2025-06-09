@@ -21,30 +21,39 @@ class AgentState(dict):
 # ──────────────────────────────────────────────────────────────────────
 # 2. Protocols (Interfaces for plug-and-play components)
 # ──────────────────────────────────────────────────────────────────────
-class Planner(Protocol):
+class Reasoner(Protocol):
+    """
+    Provides the next action based on the current state and environment.
+    """
     def choose_action(self, state: AgentState, env: FrotzEnv) -> str: ...
 
 class Evaluator(Protocol):
+    """
+    Computes a scalar reward from the transcript of past turns.
+    """
     def evaluate(self, transcript: List[str]) -> int: ...
 
 class Reflector(Protocol):
+    """
+    Generates a reflection string given the transcript and reward.
+    """
     def reflect(self, transcript: List[str], reward: int) -> str: ...
 
 # ──────────────────────────────────────────────────────────────────────
-# 3. Node implementations
+# 3. Node implementations (Reason, Act, Observe, Reflect)
 # ──────────────────────────────────────────────────────────────────────
 
-def think(state: AgentState, env: FrotzEnv, planner: Planner) -> AgentState:
+def reason(state: AgentState, env: FrotzEnv, reasoner: Reasoner) -> AgentState:
     """
-    Think node: pick an action via the Planner.
+    Reason node: choose the next action via the Reasoner.
     """
-    state["last_action"] = planner.choose_action(state, env)
+    state["last_action"] = reasoner.choose_action(state, env)
     return state
 
 
 def act(state: AgentState, env: FrotzEnv) -> AgentState:
     """
-    Act node: execute last_action, update obs, memory, seen, and done flag.
+    Act node: execute the last action, update obs, memory, seen, done.
     """
     obs, _, _, done = env.step(state["last_action"])
     obs = obs.strip()
@@ -56,18 +65,18 @@ def act(state: AgentState, env: FrotzEnv) -> AgentState:
     return state
 
 
-def evaluate(state: AgentState, evaluator: Evaluator) -> AgentState:
+def observe(state: AgentState, evaluator: Evaluator) -> AgentState:
     """
-    Evaluate node: compute reward based on memory transcript.
+    Observe node: compute reward based on memory transcript.
     """
     transcript = state["memory"].splitlines()
     state["reward"] = evaluator.evaluate(transcript)
     return state
 
 
-def reflect(state: AgentState, reflector: Reflector) -> AgentState:
+def reflect_node(state: AgentState, reflector: Reflector) -> AgentState:
     """
-    Reflect node: generate reflection based on transcript + reward, append to memory.
+    Reflect node: generate and append a reflection based on transcript and reward.
     """
     transcript = state["memory"].splitlines()
     reflection = reflector.reflect(transcript, state["reward"])
@@ -76,36 +85,35 @@ def reflect(state: AgentState, reflector: Reflector) -> AgentState:
     return state
 
 # ──────────────────────────────────────────────────────────────────────
-# 4. Engine orchestration
+# 4. Engine orchestration with LangGraph
 # ──────────────────────────────────────────────────────────────────────
 class ZorkinatorEngine:
     def __init__(
         self,
         game_path: str,
-        planner: Planner,
+        reasoner: Reasoner,
         evaluator: Evaluator,
         reflector: Reflector
     ):
         self.env = FrotzEnv(game_path)
         obs0, _ = self.env.reset()
-        self.planner = planner
+        self.reasoner = reasoner
         self.evaluator = evaluator
         self.reflector = reflector
 
         builder = StateGraph(AgentState)
-        builder.add_node("think",    lambda s: think(s, self.env, self.planner))
-        builder.add_node("act",      lambda s: act(s, self.env))
-        builder.add_node("evaluate", lambda s: evaluate(s, self.evaluator))
-        builder.add_node("reflect",  lambda s: reflect(s, self.reflector))
+        builder.add_node("reason",  lambda s: reason(s, self.env, self.reasoner))
+        builder.add_node("act",     lambda s: act(s, self.env))
+        builder.add_node("observe", lambda s: observe(s, self.evaluator))
+        builder.add_node("reflect", lambda s: reflect_node(s, self.reflector))
 
-        builder.set_entry_point("think")
-        builder.add_edge("think",    "act")
-        builder.add_edge("act",      "evaluate")
-        builder.add_edge("evaluate", "reflect")
-        builder.add_edge("reflect",  "think")
+        builder.set_entry_point("reason")
+        builder.add_edge("reason",  "act")
+        builder.add_edge("act",     "observe")
+        builder.add_edge("observe", "reflect")
+        builder.add_edge("reflect", "reason")
         self.graph = builder.compile()
 
-        # initialize full state
         self.initial_state = AgentState(
             obs=obs0,
             memory="",
@@ -116,7 +124,6 @@ class ZorkinatorEngine:
             done=False
         )
 
-        # handle Ctrl-D
         threading.Thread(target=self._watch_eof, daemon=True).start()
 
     def _watch_eof(self):
@@ -127,11 +134,11 @@ class ZorkinatorEngine:
     def run(self):
         print("🚀 Zorkinator modular engine started")
         cfg = RunnableConfig(recursion_limit=1_000_000)
-        for step, (node, state) in enumerate(
+        for step, (phase, state) in enumerate(
             self.graph.stream(self.initial_state, cfg, stream_mode="updates"),
             start=1
         ):
-            print(f"[Step {step}] Node={node}, Action={state['last_action']}, Reward={state['reward']}")
+            print(f"[Step {step}] Phase={phase}, Action={state['last_action']}, Reward={state['reward']}")
             if state.get("done"):
                 print("[Engine] Terminal state reached. Exiting loop.")
                 break
