@@ -1,14 +1,27 @@
 #!/usr/bin/env python
 import argparse
+import importlib
 from typing import List, Tuple
 
 from omegaconf import OmegaConf
-
-from engine.core import ZorkinatorEngine
+from utils.ollama import OllamaClient
 from evaluator.post_run import evaluate_run
-from utils.config_loader import build_components
-from utils.difficulty_profiles import apply_difficulty
+from engine.core import ZorkinatorEngine
 from langchain_core.runnables import RunnableConfig
+
+
+def instantiate_class(path: str, *args, **kwargs):
+    """
+    Dynamically import and instantiate a class by its full module path.
+    Falls back to no-argument constructor on TypeError.
+    """
+    module_path, cls_name = path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    cls = getattr(module, cls_name)
+    try:
+        return cls(*args, **kwargs)
+    except TypeError:
+        return cls()
 
 
 def run_episode(
@@ -50,7 +63,6 @@ def main() -> None:
         required=True,
         help="Path to YAML config (see config.yaml)"
     )
-    # Capture all further overrides as key=value strings
     parser.add_argument(
         "--opts",
         nargs=argparse.REMAINDER,
@@ -62,23 +74,30 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # 1) Load YAML
+    # 1) Load base YAML config
     cfg = OmegaConf.load(args.config_file)
 
-    # 2) Apply overrides from CLI (--opts)
-    #    e.g. --opts reasoner=RandomReasoner episode_max_steps=500
+    # 2) Apply CLI overrides via --opts
     if args.opts:
-        # OmegaConf merges dotlist semantics
         override_conf = OmegaConf.from_dotlist(args.opts)
         cfg = OmegaConf.merge(cfg, override_conf)
 
-    # 3) Difficulty profiles (optional)
-    cfg = apply_difficulty(cfg)
+    # 3) Instantiate shared Ollama client
+    client = OllamaClient(
+        model=cfg.get("ollama_model"),
+        base_url=cfg.get("ollama_base_url")
+    )
 
-    # 4) Build our three plugins
-    reasoner, evaluator, reflector = build_components(cfg)
+    # 4) Dynamically build components
+    reasoner_path   = f"engine.components.reasoners.{cfg.reasoner}"
+    evaluator_path  = f"engine.components.evaluators.{cfg.evaluator}"
+    reflector_path  = f"engine.components.reflectors.{cfg.reflector}"
 
-    # 5) Instantiate engine
+    reasoner  = instantiate_class(reasoner_path, client)
+    evaluator = instantiate_class(evaluator_path, client)
+    reflector = instantiate_class(reflector_path, client)
+
+    # 5) Create the engine
     engine = ZorkinatorEngine(
         game_path=cfg.game_file,
         reasoner=reasoner,
@@ -101,7 +120,6 @@ def main() -> None:
     print("\n🧠 Final Evaluation Report")
     for k, v in report.items():
         print(f"{k}: {v}")
-
 
 if __name__ == "__main__":
     main()
